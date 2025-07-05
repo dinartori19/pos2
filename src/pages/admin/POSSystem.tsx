@@ -582,10 +582,6 @@ const POSSystem = () => {
               <DollarSign className="w-4 h-4 mr-2" />
               Omzet Harian
             </TabsTrigger>
-            <TabsTrigger value="daily-sales" className="flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Omzet Harian
-            </TabsTrigger>
           </TabsList>
 
           {/* POS Tab */}
@@ -898,11 +894,6 @@ const POSSystem = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-          
-          {/* Daily Sales Tab */}
-          <TabsContent value="daily-sales">
-            <DailySalesView />
           </TabsContent>
           
           {/* Daily Sales Tab */}
