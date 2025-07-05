@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    width: 100%;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary hover:bg-secondary/90 text-secondary-foreground px-6 py-3 rounded-lg font-medium transition-all duration-200;
+  }
+  
+  .btn-accent {
+    @apply bg-accent hover:bg-accent/90 text-accent-foreground px-6 py-3 rounded-lg font-medium transition-all duration-200;
+  }
+  
+  .card-product {
+    @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 border border-gray-100;
+  }
+  
+  .hero-gradient {
+    background: linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #f59e0b 100%);
+  }
+
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1200px;
+    }
+  }
+}
+
+/* Print styles for POS receipt */
+@media print {
+  body * {
+    display: none;
+  }
+  
+  #receipt-content,
+  #receipt-content * {
+    display: block;
+    visibility: visible !important;
+  }
+  
+  #receipt-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm; /* Standard thermal receipt width */
+    padding: 5mm;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    background-color: white;
+    color: black;
+    margin: 0;
+  }
+  
+  /* Hide UI elements during print */
+  button, 
+  .dialog-overlay,
+  .dialog-header,
+  .dialog-footer {
+    display: none !important;
+  }
+  
+  /* Receipt specific styles */
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .receipt-divider {
+    border-top: 1px dashed #000;
+    border-bottom: 1px dashed #000;
+    margin: 8px 0;
+    padding: 4px 0;
+  }
+  
+  .receipt-header-row {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+  }
+  
+  .receipt-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    font-size: 10px;
+  }
+  
+  .receipt-item-name {
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .receipt-item-details {
+    display: flex;
+  }
+  
+  .receipt-item-qty {
+    width: 24px;
+    text-align: center;
+  }
+  
+  .receipt-item-price, .receipt-item-total {
+    width: 64px;
+    text-align: right;
+  }
+  
+  .receipt-summary {
+    border-top: 1px dashed #000;
+    padding-top: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .receipt-total, .receipt-payment, .receipt-change, .receipt-method {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .receipt-footer {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 10px;
+  }
+}

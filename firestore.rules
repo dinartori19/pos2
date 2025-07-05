@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read access to products for everyone, write/delete for authenticated users
+    match /products/{productId} {
+      allow read: if true;
+      allow write, create, update, delete: if request.auth != null;
+    }
+    
+    // Allow authenticated users to read all users, but only write to their own data
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write, create, update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+    
+    // Allow anyone to create orders, and authenticated users to manage orders
+    match /orders/{orderId} {
+      allow read: if request.auth != null || resource.data.user_id == null;
+      allow create: if true; // Allow anyone to create orders
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Allow authenticated users to access recycle bin with full permissions
+    match /recycle_bin/{itemId} {
+      allow read, write, create, update, delete: if request.auth != null;
+    }
+    
+    // Allow authenticated users to manage admin logs
+    match /admin_logs/{logId} {
+      allow read, write, create, update, delete: if request.auth != null;
+    }
+    
+    // Allow authenticated users to manage shipping rates
+    match /shipping_rates/{rateId} {
+      allow read: if true;
+      allow write, create, update, delete: if request.auth != null;
+    }
+
+    // Allow anyone to create payment proofs
+    // Admins can read, write, delete all payment proofs
+    match /payment_proofs/{paymentProofId} {
+      allow read, create: if true;
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Allow affiliate-related collections
+    match /affiliates/{affiliateId} {
+      allow read: if true;
+      allow write, create, update: if true;
+    }
+    
+    match /affiliate_referrals/{referralId} {
+      allow read: if true;
+      allow write, create, update: if true;
+    }
+    
+    match /affiliate_commissions/{commissionId} {
+      allow read: if true;
+      allow write, create, update: if true;
+    }
+    
+    match /affiliate_settings/{settingId} {
+      allow read: if true;
+      allow write, create, update: if request.auth != null;
+    }
+    
+    match /affiliate_payouts/{payoutId} {
+      allow read: if true;
+      allow write, create, update: if true;
+    }
+    
+    // Allow POS transactions to be read/written by authenticated users
+    match /pos_transactions/{transactionId} {
+      allow read, write, create, update, delete: if request.auth != null;
+    }
+    
+    // Allow affiliate-related collections with more permissive rules
+    match /affiliates/{affiliateId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (request.auth.uid == affiliateId || isAdmin());
+    }
+    
+    match /affiliate_referrals/{referralId} {
+      allow read: if true;
+      allow create: if true; // Allow tracking referrals for non-authenticated users
+      allow update: if request.auth != null;
+    }
+    
+    match /affiliate_commissions/{commissionId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if request.auth != null;
+    }
+    
+    match /affiliate_settings/{settingId} {
+      allow read: if true;
+      allow write, create, update: if request.auth != null;
+    }
+    
+    match /affiliate_payouts/{payoutId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        (request.auth.token.email == 'admin@gmail.com' || 
+         request.auth.token.email == 'ari4rich@gmail.com');
+    }
+  }
+}
