@@ -60,7 +60,8 @@ import {
   Receipt,
   Printer,
   AlertOctagon,
-  Download
+  Download,
+  DollarSign
 } from 'lucide-react';
 import { XCircle } from 'lucide-react';
 
