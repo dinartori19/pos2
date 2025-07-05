@@ -16,17 +16,24 @@ export const usePOSTransactions = (date?: string) => {
       // Set date range for query
       const selectedDate = date ? new Date(date) : new Date();
       // Reset time to start of day
-      selectedDate.setHours(0, 0, 0, 0);
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
       
-      const nextDay = new Date(selectedDate);
+      const nextDay = new Date(startOfDay);
       nextDay.setDate(nextDay.getDate() + 1);
       
       // Convert to Firestore Timestamp objects
-      const startTimestamp = Timestamp.fromDate(selectedDate);
+      const startTimestamp = Timestamp.fromDate(startOfDay);
       const endTimestamp = Timestamp.fromDate(nextDay);
       
-      console.log(`Fetching POS transactions between ${selectedDate.toISOString()} and ${nextDay.toISOString()}`);
-      console.log('Date filter:', { date, selectedDate: selectedDate.toISOString(), nextDay: nextDay.toISOString() });
+      console.log(`Fetching POS transactions between ${startOfDay.toISOString()} and ${nextDay.toISOString()}`);
+      console.log('Date filter:', { 
+        inputDate: date, 
+        startOfDay: startOfDay.toISOString(), 
+        endOfDay: nextDay.toISOString(),
+        startTimestamp: startTimestamp,
+        endTimestamp: endTimestamp
+      });
       
       // Create query with date filter
       const transactionsRef = collection(db, 'pos_transactions');
@@ -40,6 +47,7 @@ export const usePOSTransactions = (date?: string) => {
       
       // First check if collection exists and has documents
       getDocs(q).then(initialSnapshot => {
+        console.log(`Initial check found ${initialSnapshot.size} transactions`);
         if (initialSnapshot.empty) {
           console.log('No POS transactions found in initial check');
           setTransactions([]);
@@ -55,7 +63,7 @@ export const usePOSTransactions = (date?: string) => {
       // Set up real-time listener
       const unsubscribe = onSnapshot(q, (snapshot) => {
         try {
-          console.log(`Snapshot received with ${snapshot.size} documents`);
+          console.log(`Real-time snapshot received with ${snapshot.size} documents for date ${date || 'today'}`);
           if (snapshot.empty) {
             console.log('No POS transactions found');
             setTransactions([]);
@@ -71,7 +79,15 @@ export const usePOSTransactions = (date?: string) => {
               // Ensure all required fields exist
               if (data && data.timestamp && Array.isArray(data.items) && typeof data.totalAmount === 'number') {
                 // Convert Firestore timestamp to ISO string for consistent usage
-                const createdAt = data.timestamp.toDate ? data.timestamp.toDate().toISOString() : new Date().toISOString();
+                const timestamp = data.timestamp.toDate ? data.timestamp.toDate() : new Date();
+                const createdAt = timestamp.toISOString();
+                
+                console.log(`Transaction ${doc.id} timestamp:`, {
+                  rawTimestamp: data.timestamp,
+                  convertedDate: timestamp,
+                  isoString: createdAt
+                });
+                
                 transactionData.push({ 
                   id: doc.id, 
                   ...data,
@@ -113,7 +129,10 @@ export const usePOSTransactions = (date?: string) => {
 
           // Sort manually since we're not using orderBy
           transactionData.sort((a, b) => {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            // Use timestamp for sorting if available
+            const dateA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.createdAt).getTime();
+            const dateB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.createdAt).getTime();
+            return dateB - dateA;
           });
           
           console.log(`Loaded ${transactionData.length} POS transactions`);
@@ -153,7 +172,7 @@ export const getPOSTransactionsByDateRange = async (startDate: Date, endDate: Da
     // Reset time to start of day
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
-    
+
     // Convert to Firestore Timestamp objects
     const startTimestamp = Timestamp.fromDate(startDate);
     const endTimestamp = Timestamp.fromDate(endDate);
@@ -174,8 +193,16 @@ export const getPOSTransactionsByDateRange = async (startDate: Date, endDate: Da
       
       snapshot.forEach((doc) => {
         const data = doc.data() as any;
-        // Convert Firestore timestamp to ISO string
-        const createdAt = data.timestamp.toDate ? data.timestamp.toDate().toISOString() : new Date().toISOString();
+        // Ensure we have a valid timestamp
+        if (!data.timestamp) {
+          console.warn(`Transaction ${doc.id} has no timestamp, skipping`);
+          return;
+        }
+        
+        // Convert Firestore timestamp to Date object
+        const timestamp = data.timestamp.toDate ? data.timestamp.toDate() : new Date();
+        const createdAt = timestamp.toISOString();
+        
         transactions.push({ 
           id: doc.id, 
           ...data,
@@ -185,7 +212,10 @@ export const getPOSTransactionsByDateRange = async (startDate: Date, endDate: Da
       
       // Sort manually by date
       transactions.sort((a, b) => {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        // Use timestamp for sorting if available
+        const dateA = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : new Date(a.createdAt).getTime();
+        const dateB = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : new Date(b.createdAt).getTime();
+        return dateB - dateA;
       });
       
       console.log(`Found ${transactions.length} transactions in date range`);

@@ -212,6 +212,7 @@ export interface POSTransaction {
   change?: number;
   status: 'completed' | 'cancelled';
   timestamp?: any; // Firestore Timestamp
+  dateString?: string; // YYYY-MM-DD format for easier filtering
   createdAt: string;
   cashierId: string;
   cashierName: string;

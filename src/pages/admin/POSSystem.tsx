@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePOSTransactions } from '@/hooks/usePOSTransactions';
 import DailySalesView from '@/components/admin/DailySalesView';
 
-// UI Components
+// UI Components 
 import { 
   Card, 
   CardContent, 
@@ -100,6 +100,7 @@ const POSSystem = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentTransaction, setCurrentTransaction] = useState<any>(null);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false); 
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   
@@ -339,11 +340,23 @@ const POSSystem = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('id-ID', {
       year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Handle manual refresh of transactions
+  const handleRefreshTransactions = () => {
+    setIsRefreshing(true);
+    // Force re-render by changing the date slightly and then back
+    const currentDate = selectedDate;
+    setSelectedDate('refresh-trigger');
+    setTimeout(() => {
+      setSelectedDate(currentDate);
+      setIsRefreshing(false);
+    }, 500);
   };
 
   // Print receipt
@@ -787,13 +800,19 @@ const POSSystem = () => {
                       <Calendar className="w-4 h-4 text-gray-500" />
                       <Input
                         type="date"
+                        max={new Date().toISOString().split('T')[0]} // Prevent selecting future dates
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                         className="w-40"
                       />
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                      <RefreshCw className="w-4 h-4 mr-2" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRefreshTransactions}
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                       Refresh
                     </Button>
                   </div>
@@ -802,7 +821,8 @@ const POSSystem = () => {
               <CardContent>
                 {transactionsLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mr-3"></div>
+                    <span>Memuat data transaksi...</span>
                   </div>
                 ) : transactionsError ? (
                   <div className="text-center py-12">
@@ -859,13 +879,13 @@ const POSSystem = () => {
                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {transaction.id.slice(0, 8)}...
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                               {formatDate(transaction.createdAt)}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                               {transaction.cashierName}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                               <Badge variant="outline">
                                 {transaction.paymentMethod === 'cash' ? 'Tunai' : 
                                  transaction.paymentMethod === 'card' ? 'Kartu' : 
@@ -876,11 +896,12 @@ const POSSystem = () => {
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
                               {formatCurrency(transaction.totalAmount)}
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-center">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => showReceipt(transaction)}
+                                className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                               >
                                 <Receipt className="w-4 h-4 mr-2" />
                                 Struk

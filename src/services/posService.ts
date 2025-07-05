@@ -7,7 +7,7 @@ import { updateDailySales } from './dailySalesService';
 // Process a POS transaction and update inventory
 export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'id'>) => {
   try {
-    console.log('Processing POS transaction:', transaction);
+    console.log('Processing POS transaction:', JSON.stringify(transaction, null, 2));
     let transactionId = '';
     
     // Use a transaction to ensure atomicity
@@ -49,8 +49,10 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
         cashierName: transaction.cashierName,
         // Use Firestore Timestamp for better querying
         timestamp: Timestamp.now(),
-        // Keep createdAt for backward compatibility
-        createdAt: new Date().toISOString()
+        // Keep createdAt for backward compatibility - use the same time as timestamp
+        createdAt: new Date().toISOString(),
+        // Add a date string for easier filtering
+        dateString: new Date().toISOString().split('T')[0]
       });
       
       transactionId = transactionRef.id;
