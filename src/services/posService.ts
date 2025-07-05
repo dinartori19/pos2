@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, doc, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, runTransaction, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Product, POSTransaction } from '@/types';
 import { toast } from '@/hooks/use-toast';
@@ -39,7 +39,17 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
     // Create transaction record
     try {
       const transactionRef = await addDoc(collection(db, 'pos_transactions'), {
-        ...transaction,
+        items: transaction.items,
+        totalAmount: transaction.totalAmount,
+        paymentMethod: transaction.paymentMethod,
+        cashReceived: transaction.cashReceived,
+        change: transaction.change,
+        status: transaction.status,
+        cashierId: transaction.cashierId,
+        cashierName: transaction.cashierName,
+        // Use Firestore Timestamp for better querying
+        timestamp: Timestamp.now(),
+        // Keep createdAt for backward compatibility
         createdAt: new Date().toISOString()
       });
       
@@ -49,7 +59,7 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       // Create financial transaction record
       await addDoc(collection(db, 'financial_transactions'), {
         transactionId: transactionId,
-        date: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
         category: 'sales',
         type: 'income',
         amount: transaction.totalAmount,
@@ -61,8 +71,7 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       console.log('Financial transaction record created');
       
       // Update daily sales record
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-      await updateDailySales(today, transaction.totalAmount);
+      await updateDailySales(new Date().toISOString().split('T')[0], transaction.totalAmount);
       console.log('Daily sales record updated');
       
     } catch (error) {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, onSnapshot, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { POSTransaction } from '@/types';
 
@@ -15,20 +15,26 @@ export const usePOSTransactions = (date?: string) => {
     try {
       // Set date range for query
       const selectedDate = date ? new Date(date) : new Date();
+      // Reset time to start of day
       selectedDate.setHours(0, 0, 0, 0);
       
       const nextDay = new Date(selectedDate);
       nextDay.setDate(nextDay.getDate() + 1);
       
-      const startDateStr = selectedDate.toISOString();
-      const endDateStr = nextDay.toISOString();
+      // Convert to Firestore Timestamp objects
+      const startTimestamp = Timestamp.fromDate(selectedDate);
+      const endTimestamp = Timestamp.fromDate(nextDay);
       
-      console.log(`Fetching POS transactions between ${startDateStr} and ${endDateStr}`);
-      console.log('Date filter:', { date, selectedDate, nextDay });
+      console.log(`Fetching POS transactions between ${selectedDate.toISOString()} and ${nextDay.toISOString()}`);
+      console.log('Date filter:', { date, selectedDate: selectedDate.toISOString(), nextDay: nextDay.toISOString() });
       
-      // Create query - using simple query to avoid index requirements
+      // Create query with date filter
       const transactionsRef = collection(db, 'pos_transactions');
-      const q = query(transactionsRef);
+      const q = query(
+        transactionsRef,
+        where('timestamp', '>=', startTimestamp),
+        where('timestamp', '<', endTimestamp)
+      );
       
       console.log('Setting up POS transactions listener');
       
@@ -61,16 +67,19 @@ export const usePOSTransactions = (date?: string) => {
           snapshot.forEach((doc) => {
             console.log(`Processing transaction document: ${doc.id}`);
             try {
-              const data = doc.data();
+              const data = doc.data() as any;
               // Ensure all required fields exist
-              if (data && data.createdAt && Array.isArray(data.items) && typeof data.totalAmount === 'number') {
+              if (data && data.timestamp && Array.isArray(data.items) && typeof data.totalAmount === 'number') {
+                // Convert Firestore timestamp to ISO string for consistent usage
+                const createdAt = data.timestamp.toDate ? data.timestamp.toDate().toISOString() : new Date().toISOString();
                 transactionData.push({ 
                   id: doc.id, 
-                  ...data 
+                  ...data,
+                  createdAt: createdAt
                 } as POSTransaction);
               } else {
                 console.warn(`Skipping transaction ${doc.id} due to missing required fields:`, {
-                  hasCreatedAt: !!data?.createdAt,
+                  hasTimestamp: !!data?.timestamp,
                   hasItems: !!data?.items,
                   isItemsArray: Array.isArray(data?.items),
                   hasTotalAmount: typeof data?.totalAmount === 'number'
@@ -82,7 +91,8 @@ export const usePOSTransactions = (date?: string) => {
           });
           
           // Filter by date client-side instead of in the query
-          if (date) {
+          /* No longer needed as we're filtering in the query
+          if (false && date) {
             console.log(`Filtering transactions by date: ${date}`);
             try {
               transactionData = transactionData.filter(t => {
@@ -99,7 +109,7 @@ export const usePOSTransactions = (date?: string) => {
             } catch (filterError) {
               console.error('Error filtering transactions by date:', filterError);
             }
-          }
+          }*/
 
           // Sort manually since we're not using orderBy
           transactionData.sort((a, b) => {
@@ -140,25 +150,37 @@ export const usePOSTransactions = (date?: string) => {
 
 export const getPOSTransactionsByDateRange = async (startDate: Date, endDate: Date) => {
   try {
-    const startDateStr = startDate.toISOString();
-    const endDateStr = new Date(endDate.getTime() + 86400000).toISOString(); // Add one day to include the end date
+    // Reset time to start of day
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
     
-    console.log('Fetching POS transactions from', startDateStr, 'to', endDateStr);
+    // Convert to Firestore Timestamp objects
+    const startTimestamp = Timestamp.fromDate(startDate);
+    const endTimestamp = Timestamp.fromDate(endDate);
+    
+    console.log('Fetching POS transactions from', startDate.toISOString(), 'to', endDate.toISOString());
     
     const transactionsRef = collection(db, 'pos_transactions');
-    // Use a simpler query to avoid index requirements
-    const q = query(transactionsRef);
+    // Query with date range
+    const q = query(
+      transactionsRef,
+      where('timestamp', '>=', startTimestamp),
+      where('timestamp', '<=', endTimestamp)
+    );
     
     try {
       const snapshot = await getDocs(q);
       const transactions: POSTransaction[] = [];
       
       snapshot.forEach((doc) => {
-        const data = doc.data();
-        // Filter by date manually
-        if (data.createdAt && data.createdAt >= startDateStr && data.createdAt < endDateStr) {
-          transactions.push({ id: doc.id, ...data } as POSTransaction);
-        }
+        const data = doc.data() as any;
+        // Convert Firestore timestamp to ISO string
+        const createdAt = data.timestamp.toDate ? data.timestamp.toDate().toISOString() : new Date().toISOString();
+        transactions.push({ 
+          id: doc.id, 
+          ...data,
+          createdAt: createdAt 
+        } as POSTransaction);
       });
       
       // Sort manually by date
@@ -189,6 +211,7 @@ export const createFinancialTransaction = async (data: {
   paymentMethod?: string;
 }) => {
   try {
+    const { addDoc } = await import('firebase/firestore');
     const financialTransactionsRef = collection(db, 'financial_transactions');
     const docRef = await addDoc(financialTransactionsRef, {
       ...data,
