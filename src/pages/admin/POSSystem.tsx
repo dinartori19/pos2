@@ -13,7 +13,6 @@ import { Product } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePOSTransactions } from '@/hooks/usePOSTransactions';
 import DailySalesView from '@/components/admin/DailySalesView';
-import DailySalesView from '@/components/admin/DailySalesView';
 
 // UI Components
 import { 
