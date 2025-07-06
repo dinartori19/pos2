@@ -20,6 +20,8 @@ let isInitialized = false;
 try {
   console.log('Initializing Firebase with config:', {
     projectId: firebaseConfig.projectId
+  }
+  )
   // Only initialize once
   if (!isInitialized) {
     console.log('Initializing Firebase...');
@@ -47,6 +49,11 @@ try {
         })
         .catch((err) => {
           if (err.code === 'failed-precondition') {
+          }
+        }
+        )
+    }
+  }
   // Only initialize once
   if (!isInitialized) {
     console.log('Initializing Firebase...');
@@ -84,7 +91,7 @@ try {
     }
     
     // Mark as initialized
-} catch (error) {
+  } catch (error) {
   console.error('Firebase initialization error:', error);
   
   // Provide fallback implementations to prevent app crashes
@@ -107,6 +114,7 @@ try {
     })
   } as any;
   storage = {} as any;
+}
 }
 
 export { auth, db, storage };

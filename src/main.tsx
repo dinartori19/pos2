@@ -50,6 +50,10 @@ const updateSW = registerSW({
     const shouldUpdate = window.localStorage.getItem('autoUpdateEnabled') !== 'false';
     if (shouldUpdate) {
       console.log('New content available, updating automatically');
+    }
+  }
+}
+)
 const updateSW = registerSW({ 
   // Increase the interval to check for updates to reduce reload frequency
   immediate: false,
