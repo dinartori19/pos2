@@ -60,7 +60,7 @@ const Invoice = ({ order, invoiceNumber }: InvoiceProps) => {
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 rounded-full overflow-hidden">
             <img 
-              src="/logo.jpg" 
+              src="/logo.svg" 
               alt="Injapan Food Logo" 
               className="w-full h-full object-contain"
             />

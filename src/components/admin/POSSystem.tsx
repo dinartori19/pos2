@@ -55,7 +55,7 @@
         <div className="text-center mb-4 receipt-header">
          <div className="w-16 h-16 mx-auto mb-2">
            <img 
-             src="/logo.jpg"
+             src="/logo.svg"
              alt="Injapan Food Logo" 
              className="w-full h-full object-contain rounded-full"
            />

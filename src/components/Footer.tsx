@@ -61,13 +61,13 @@ const Footer = () => {
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0">
                 <img 
-                  src="/logo.jpg" 
+                  src="/logo.svg" 
                   alt="Injapan Food Logo" 
                   className="w-full h-full object-contain"
                 />
               </div>
               <div>
-                <h3 className="text-2xl font-bold">Injapan Food</h3>
+                <h3 className="text-2xl font-bold text-white">Injapan Food</h3>
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed max-w-md">
