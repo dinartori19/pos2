@@ -17,6 +17,8 @@ let isInitialized = false;
 try {
   console.log('Initializing Firebase with config:', {
     projectId: firebaseConfig.projectId,
+  }
+  )
   // Only initialize once
   if (!isInitialized) {
     console.log('Initializing Firebase...');
