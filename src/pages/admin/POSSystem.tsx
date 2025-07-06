@@ -477,9 +477,20 @@ const POSSystem = () => {
     console.log('Generating PDF...');
     
     try {
-      // Dynamically import html2canvas and jsPDF
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
+      // Load the libraries with error handling
+      let html2canvas, jsPDF;
+      try {
+        html2canvas = (await import('html2canvas')).default;
+        jsPDF = (await import('jspdf')).default;
+      } catch (importError) {
+        console.error('Error importing PDF libraries:', importError);
+        toast({
+          title: "Error",
+          description: "Gagal memuat library PDF. Coba refresh halaman.",
+          variant: "destructive"
+        });
+        return;
+      }
       
       // Create a clone of the receipt element with simplified styling for PDF
       const receiptClone = receiptRef.current.cloneNode(true) as HTMLElement;
@@ -491,55 +502,194 @@ const POSSystem = () => {
       receiptClone.style.padding = '10px';
       receiptClone.style.backgroundColor = 'white';
       
-      // Create canvas from the clone
-      const canvas = await html2canvas(receiptRef.current, {
-        scale: 2, // Higher resolution
-        allowTaint: true,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: 300,
-        height: receiptRef.current.offsetHeight
-      });
+      // Create canvas with error handling
+      let canvas;
+      try {
+        canvas = await html2canvas(receiptRef.current, {
+          scale: 2, // Higher resolution
+          allowTaint: true,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: 300,
+          height: receiptRef.current.offsetHeight
+        });
+      } catch (canvasError) {
+        console.error('Error creating canvas:', canvasError);
+        document.body.removeChild(receiptClone);
+        toast({
+          title: "Error",
+          description: "Gagal membuat gambar struk. Coba lagi.",
+          variant: "destructive"
+        });
+        return;
+      }
       
       // Remove the clone after canvas creation
       document.body.removeChild(receiptClone);
       
-      // Create PDF (80mm width typical for receipts)
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      // Calculate dimensions to fit receipt in PDF
-      const imgWidth = 80; // 80mm width
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      
-      // Calculate height while maintaining aspect ratio
-      const ratio = canvas.height / canvas.width;
-      const imgHeight = imgWidth * ratio;
-      
-      // Center horizontally
-      const x = (pageWidth - imgWidth) / 2;
-      
-      // Add image to PDF with calculated dimensions
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', x, 10, imgWidth, imgHeight);
-      
-      // Save PDF
-      pdf.save(`struk-${currentTransaction?.id.slice(0, 8)}.pdf`);
-      
-      toast({
-        title: "Berhasil",
-        description: "Struk berhasil diunduh sebagai PDF",
-      });
+      try {
+        // Create PDF (80mm width typical for receipts)
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // Calculate dimensions to fit receipt in PDF
+        const imgWidth = 80; // 80mm width
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        
+        // Calculate height while maintaining aspect ratio
+        const ratio = canvas.height / canvas.width;
+        const imgHeight = imgWidth * ratio;
+        
+        // Center horizontally
+        const x = (pageWidth - imgWidth) / 2;
+        
+        // Add image to PDF with calculated dimensions
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', x, 10, imgWidth, imgHeight);
+        
+        // Save PDF
+        pdf.save(`struk-${currentTransaction?.id.slice(0, 8)}.pdf`);
+        
+        toast({
+          title: "Berhasil",
+          description: "Struk berhasil diunduh sebagai PDF",
+        });
+      } catch (pdfError) {
+        console.error('Error generating PDF:', pdfError);
+        toast({
+          title: "Error",
+          description: "Gagal membuat file PDF. Coba lagi.",
+          variant: "destructive"
+        });
+        return;
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
         title: "Error",
-        description: "Terjadi kesalahan saat mengunduh struk sebagai PDF",
+        description: "Gagal mengunduh struk sebagai PDF. Coba refresh halaman.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Print receipt with error handling
+  const printReceipt = async () => {
+    if (!receiptRef.current) {
+      toast({
+        title: "Error",
+        description: "Konten struk tidak ditemukan",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Printing receipt...');
+    
+    try {
+      const printContent = receiptRef.current.innerHTML;
+      
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({
+          title: "Error",
+          description: "Tidak dapat membuka jendela cetak. Pastikan popup tidak diblokir.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Add print-specific styles
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Struk Pembayaran</title>
+            <style>
+              body { 
+                font-family: 'Courier New', monospace;
+                width: 80mm; /* Standard thermal receipt width */
+                margin: 0 auto;
+                padding: 5mm;
+                font-size: 12px;
+              }
+              .receipt-header {
+                text-align: center;
+                margin-bottom: 10px;
+              }
+              .receipt-header h3 {
+                font-size: 16px;
+                margin: 0;
+              }
+              .receipt-header p {
+                margin: 2px 0;
+                font-size: 12px;
+              }
+              .divider {
+                border-top: 1px dashed #000;
+                margin: 10px 0;
+              }
+              .item {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+              }
+              .item-details {
+                flex: 1;
+              }
+              .item-price {
+                text-align: right;
+                font-weight: bold;
+              }
+              .total-section {
+                margin-top: 10px;
+                font-weight: bold;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 20px;
+                font-size: 10px;
+              }
+              @media print {
+                body {
+                  width: 100%;
+                  padding: 0;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${printContent}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Print after a short delay to ensure content is loaded
+      setTimeout(() => {
+        console.log('Executing print command...');
+        printWindow.print();
+        // Don't close the window immediately to allow printing to complete
+        setTimeout(() => {
+          printWindow.close();
+        }, 1000);
+      }, 250);
+      
+      toast({
+        title: "Print Berhasil",
+        description: "Struk berhasil dicetak",
+      });
+    } catch (error) {
+      console.error('Error printing receipt:', error);
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat mencetak struk",
         variant: "destructive"
       });
     }
