@@ -1,7 +1,7 @@
 import { collection, addDoc, updateDoc, doc, runTransaction, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Product, POSTransaction } from '@/types';
-import { toast } from '@/hooks/use-toast'; 
+import { toast } from '@/hooks/use-toast';
 import { updateDailySales } from './dailySalesService';
 
 // Process a POS transaction and update inventory
@@ -40,9 +40,21 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
     try {
       // Get current date in YYYY-MM-DD format for easier filtering
       const dateString = new Date().toISOString().split('T')[0];
+
+      // Create a simplified version of items without full product objects
+      const simplifiedItems = transaction.items.map(item => ({
+        id: item.id,
+        product_id: item.product.id,
+        name: item.product.name,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.totalPrice,
+        // Only store the image URL reference, not the full image data
+        image_url: item.product.image_url
+      }));
       
       const transactionRef = await addDoc(collection(db, 'pos_transactions'), {
-        items: transaction.items,
+        items: simplifiedItems,
         totalAmount: transaction.totalAmount,
         paymentMethod: transaction.paymentMethod,
         cashReceived: transaction.cashReceived,
@@ -67,9 +79,9 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
         date: dateString, // YYYY-MM-DD format
         category: 'sales',
         type: 'income',
-        amount: transaction.totalAmount,
+        amount: transaction.totalAmount, 
         description: `POS Sale by ${transaction.cashierName}`,
-        items: transaction.items,
+        items: simplifiedItems,
         totalAmount: transaction.totalAmount,
         paymentMethod: transaction.paymentMethod,
         cashReceived: transaction.cashReceived,
