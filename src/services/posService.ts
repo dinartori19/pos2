@@ -44,13 +44,16 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       // Create a simplified version of items without full product objects
       const transactionItems = transaction.items.map(item => ({
         id: item.id,
-        product_id: item.product.id, 
-        name: item.product.name, 
+        product: {
+          id: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          category: item.product.category,
+          image_url: item.product.image_url
+        },
         price: item.price, 
         quantity: item.quantity,
-        totalPrice: item.totalPrice,
-        // Only store the image URL reference, not the full image data
-        image_url: item.product.image_url
+        totalPrice: item.totalPrice
       }));
       
       const transactionRef = await addDoc(collection(db, 'pos_transactions'), {
