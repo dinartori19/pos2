@@ -465,6 +465,111 @@ const POSSystem = () => {
     }
   };
 
+  // Print receipt function
+  const printReceipt = () => {
+    if (!receiptRef.current) return;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
+    // Get the receipt content
+    const receiptContent = receiptRef.current.innerHTML;
+    
+    // Create the print document
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Struk Pembayaran</title>
+          <style>
+            @media print {
+              body {
+                margin: 0;
+                padding: 10px;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+              }
+              .receipt-header {
+                text-align: center;
+                margin-bottom: 10px;
+              }
+              .receipt-divider {
+                border-top: 1px dashed #000;
+                border-bottom: 1px dashed #000;
+                margin: 5px 0;
+                padding: 2px 0;
+              }
+              .receipt-header-row {
+                border-bottom: 1px dashed #000;
+                padding-bottom: 2px;
+                margin-bottom: 5px;
+              }
+              .receipt-item {
+                margin-bottom: 3px;
+              }
+              .receipt-item-name {
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+              .receipt-item-details {
+                display: flex;
+                gap: 8px;
+              }
+              .receipt-item-qty {
+                width: 24px;
+                text-align: center;
+              }
+              .receipt-item-price {
+                width: 64px;
+                text-align: right;
+              }
+              .receipt-item-total {
+                width: 64px;
+                text-align: right;
+                font-weight: bold;
+              }
+              .receipt-summary {
+                border-top: 1px dashed #000;
+                padding-top: 5px;
+                margin-bottom: 5px;
+              }
+              .receipt-total {
+                font-weight: bold;
+              }
+              .receipt-payment,
+              .receipt-change,
+              .receipt-method {
+                margin-top: 2px;
+              }
+              .receipt-footer {
+                text-align: center;
+                margin-top: 10px;
+              }
+              @page {
+                size: 80mm auto;
+                margin: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${receiptContent}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
+  };
 
   // Render error state
   if (productsError) {
