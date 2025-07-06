@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
-import { registerSW } from 'virtual:pwa-register' 
+import { registerSW } from 'virtual:pwa-register'
 
 // Add error boundary to catch and display render errors
 window.addEventListener('error', (event) => {
@@ -24,13 +24,14 @@ window.addEventListener('error', (event) => {
 });
 
 // Register service worker
-const updateSW = registerSW({ 
+registerSW({ 
   // Increase the interval to check for updates to reduce reload frequency
   immediate: false,
   intervalMS: 60 * 60 * 1000, // Check for updates every hour instead of every minute
   onNeedRefresh() {
     // Use a less intrusive notification instead of a confirm dialog
     const shouldUpdate = window.localStorage.getItem('autoUpdateEnabled') !== 'false';
+    const updateSW = registerSW;
     if (shouldUpdate) {
       console.log('New content available, updating automatically');
       updateSW(true);

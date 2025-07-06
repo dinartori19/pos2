@@ -39,10 +39,10 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
     // Create transaction record
     try {
       // Get current date in YYYY-MM-DD format for easier filtering
-      const dateString = new Date().toISOString().split('T')[0];
+      const transactionDateString = new Date().toISOString().split('T')[0];
 
       // Create a simplified version of items without full product objects
-      const simplifiedItems = transaction.items.map(item => ({
+      const transactionItems = transaction.items.map(item => ({
         id: item.id,
         product_id: item.product.id, 
         name: item.product.name, 
@@ -54,7 +54,7 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       }));
       
       const transactionRef = await addDoc(collection(db, 'pos_transactions'), {
-        items: simplifiedItems,
+        items: transactionItems,
         totalAmount: transaction.totalAmount,
         paymentMethod: transaction.paymentMethod,
         cashReceived: transaction.cashReceived,
@@ -65,9 +65,9 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
         // Use Firestore Timestamp for better querying
         timestamp: Timestamp.now(),
         // Keep createdAt for backward compatibility - use the same time as timestamp
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), 
         // Add a date string for easier filtering
-        dateString: dateString
+        dateString: transactionDateString
       });
       
       transactionId = transactionRef.id;
@@ -76,31 +76,24 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       // Create financial transaction record
       await addDoc(collection(db, 'financial_transactions'), {
         transactionId: transactionId,
-        date: dateString, // YYYY-MM-DD format
+        date: transactionDateString, // YYYY-MM-DD format
         category: 'sales',
         type: 'income',
         amount: transaction.totalAmount, 
         description: `POS Sale by ${transaction.cashierName}`,
-        items: simplifiedItems,
-        totalAmount: transaction.totalAmount,
-        paymentMethod: transaction.paymentMethod,
-        cashReceived: transaction.cashReceived,
-        change: transaction.change,
-        status: transaction.status,
-        cashierId: transaction.cashierId,
-        cashierName: transaction.cashierName,
+        paymentMethod: transaction.paymentMethod, 
         // Use Firestore Timestamp for better querying
         timestamp: Timestamp.now(),
         // Keep createdAt for backward compatibility - use the same time as timestamp
         createdAt: new Date().toISOString(),
         // Add a date string for easier filtering
-        dateString: dateString
+        dateString: transactionDateString
       });
       
       console.log('Financial transaction record created');
       
       // Update daily sales record
-      await updateDailySales(dateString, transaction.totalAmount);
+      await updateDailySales(transactionDateString, transaction.totalAmount);
       
     } catch (error) {
       console.error('Error saving transaction records:', error);
