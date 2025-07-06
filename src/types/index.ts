@@ -200,8 +200,14 @@ export interface PaymentProof {
 export interface POSTransaction {
   id: string;
   items: Array<{
-    id: string;
-    product: Product;
+    id: string; 
+    product: {
+      id: string;
+      name: string;
+      price: number;
+      category: string;
+      image_url?: string;
+    };
     quantity: number;
     price: number;
     totalPrice: number;

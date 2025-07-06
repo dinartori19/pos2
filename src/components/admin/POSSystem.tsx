@@ -48,6 +48,8 @@
                     <span>Memuat data transaksi...</span>
                   </div>
                 ) : transactionsError ? (
+                )
+                }
 
       <div className="font-mono" style={{ width: '100%', maxWidth: '300px', margin: '0 auto' }}>
         <div className="text-center mb-4 receipt-header">
