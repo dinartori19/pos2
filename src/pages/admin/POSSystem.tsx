@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useFirebaseAuth';
 import { useProducts } from '@/hooks/useProducts';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import RealtimeClock from '@/components/admin/RealtimeClock';
 import CashierSelector from '@/components/admin/CashierSelector';
 import { db } from '@/config/firebase';
@@ -47,23 +47,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Search, 
-  ShoppingCart, 
-  Plus,
-  Minus, 
-  Trash2, 
-  CreditCard, 
-  Calendar,
-  CheckCircle, 
-  RefreshCw,
-  Receipt,
-  Printer,
-  AlertOctagon,
-  Download,
-  DollarSign
-} from 'lucide-react';
-import { XCircle } from 'lucide-react';
+import { Search, ShoppingCart, Plus, Minus, Trash2, CreditCard, Calendar, CheckCircle, 
+  RefreshCw, Receipt, Printer, AlertOctagon, Download, XCircle, DollarSign } from 'lucide-react';
 
 // Cart item interface
 interface CartItem {
@@ -104,8 +89,12 @@ const POSSystem = () => {
   const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   
-  // Get transactions for the selected date
-  const { transactions, loading: transactionsLoading, error: transactionsError } = usePOSTransactions(selectedDate);
+  // Get transactions for the selected date with error handling
+  const { 
+    transactions, 
+    loading: transactionsLoading, 
+    error: transactionsError 
+  } = usePOSTransactions(selectedDate);
 
   // Get unique categories from products
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];
@@ -253,26 +242,32 @@ const POSSystem = () => {
     
     try {
       // Prepare transaction object
+      // Create a simplified version of items without full product objects
+      // to avoid storing duplicate data and prevent unnecessary image uploads
+      const simplifiedItems = cart.map(item => ({
+        id: item.id,
+        product: {
+          id: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          category: item.product.category,
+          image_url: item.product.image_url // Just store the URL, don't upload again
+        },
+        quantity: item.quantity,
+        price: item.price,
+        totalPrice: item.totalPrice
+      }));
+      
       const transaction = {
-        items: cart.map(item => ({
-          id: item.id,
-          product: {
-            id: item.product.id,
-            name: item.product.name,
-            price: item.product.price,
-            category: item.product.category,
-            image_url: item.product.image_url
-          },
-          quantity: item.quantity,
-          price: item.price,
-          totalPrice: item.totalPrice
-        })),
+        items: simplifiedItems,
         totalAmount: cartTotal,
         paymentMethod,
         cashReceived: paymentMethod === 'cash' ? cashReceived : undefined,
         change: paymentMethod === 'cash' ? changeAmount : undefined,
         status: 'completed',
-        createdAt: new Date().toISOString(),
+        timestamp: Timestamp.now(), // Use Firestore Timestamp for better querying
+        dateString: new Date().toISOString().split('T')[0], // Add date string for easier filtering
+        createdAt: new Date().toISOString(), // Keep for backward compatibility
         cashierId: selectedCashier.id,
         cashierName: selectedCashier.name
       };
@@ -312,6 +307,236 @@ const POSSystem = () => {
     }
   };
 
+  // Handle manual refresh of transactions
+  const handleRefreshTransactions = () => {
+    setIsRefreshing(true);
+    // Force re-render by changing the date slightly and then back
+    const currentDate = selectedDate;
+    setSelectedDate('refresh-trigger');
+    setTimeout(() => {
+      setSelectedDate(currentDate);
+      setIsRefreshing(false);
+    }, 500);
+  };
+
+  // Print receipt
+  const printReceipt = async () => {
+    if (!receiptRef.current) return;
+    
+    console.log('Printing receipt...');
+    
+    try {
+      const printContent = receiptRef.current.innerHTML;
+      
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({
+          title: "Error",
+          description: "Tidak dapat membuka jendela cetak. Pastikan popup tidak diblokir.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Add print-specific styles
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Struk Pembayaran</title>
+            <style>
+              body {
+                font-family: 'Courier New', monospace;
+                width: 80mm; /* Standard thermal receipt width */
+                margin: 0 auto;
+                padding: 5mm;
+                font-size: 12px;
+              }
+              .receipt-header {
+                text-align: center;
+                margin-bottom: 10px;
+              }
+              .receipt-header h3 {
+                font-size: 16px;
+                margin: 0;
+              }
+              .receipt-header p {
+                margin: 2px 0;
+                font-size: 12px;
+              }
+              .divider {
+                border-top: 1px dashed #000;
+                margin: 10px 0;
+              }
+              .item {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 5px;
+              }
+              .item-details {
+                flex: 1;
+              }
+              .item-price {
+                text-align: right;
+                font-weight: bold;
+              }
+              .total-section {
+                margin-top: 10px;
+                font-weight: bold;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 20px;
+                font-size: 10px;
+              }
+              @media print {
+                body {
+                  width: 100%;
+                  padding: 0;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            ${printContent}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Print after a short delay to ensure content is loaded
+      setTimeout(() => {
+        console.log('Executing print command...');
+        printWindow.print();
+        // Don't close the window immediately to allow printing to complete
+        setTimeout(() => {
+          printWindow.close();
+        }, 1000);
+      }, 250);
+      
+      toast({
+        title: "Print Berhasil",
+        description: "Struk berhasil dicetak",
+      });
+      
+    } catch (error) {
+      console.error('Error printing receipt:', error);
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat mencetak struk",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Download receipt as PDF
+  const downloadReceiptPDF = async () => {
+    if (!receiptRef.current) return;
+    console.log('Generating PDF...');
+    
+    try {
+      // Dynamically import html2canvas and jsPDF with error handling
+      let html2canvas, jsPDF;
+      try {
+        html2canvas = (await import('html2canvas')).default;
+        jsPDF = (await import('jspdf')).default;
+      } catch (importError) {
+        console.error('Error importing PDF libraries:', importError);
+        toast({
+          title: "Error",
+          description: "Gagal memuat library PDF. Coba refresh halaman.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Create a clone of the receipt element with simplified styling for PDF
+      const receiptClone = receiptRef.current.cloneNode(true) as HTMLElement;
+      document.body.appendChild(receiptClone);
+      receiptClone.style.position = 'absolute';
+      receiptClone.style.left = '-9999px';
+      receiptClone.style.fontFamily = 'Courier, monospace';
+      receiptClone.style.width = '300px';
+      receiptClone.style.padding = '10px';
+      receiptClone.style.backgroundColor = 'white';
+      
+      // Create canvas from the clone with error handling
+      let canvas;
+      try {
+        canvas = await html2canvas(receiptRef.current, {
+          scale: 2, // Higher resolution
+          allowTaint: true,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          width: 300,
+          height: receiptRef.current.offsetHeight
+        });
+      } catch (canvasError) {
+        console.error('Error creating canvas:', canvasError);
+        document.body.removeChild(receiptClone);
+        toast({
+          title: "Error",
+          description: "Gagal membuat gambar struk. Coba lagi.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Remove the clone after canvas creation
+      document.body.removeChild(receiptClone);
+      
+      // Create PDF (80mm width typical for receipts) with error handling
+      try {
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // Calculate dimensions to fit receipt in PDF
+        const imgWidth = 80; // 80mm width
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        // Calculate height while maintaining aspect ratio
+        const ratio = canvas.height / canvas.width;
+        const imgHeight = imgWidth * ratio;
+        
+        // Center horizontally
+        const x = (pageWidth - imgWidth) / 2;
+        
+        // Add image to PDF with calculated dimensions
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', x, 10, imgWidth, imgHeight);
+        
+        // Save PDF
+        pdf.save(`struk-${currentTransaction?.id?.slice(0, 8) || 'pos'}.pdf`);
+        
+        toast({
+          title: "Berhasil",
+          description: "Struk berhasil diunduh sebagai PDF",
+        });
+      } catch (pdfError) {
+        console.error('Error generating PDF:', pdfError);
+        toast({
+          title: "Error",
+          description: "Gagal membuat file PDF. Coba lagi.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Terjadi kesalahan saat mengunduh struk sebagai PDF",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Complete transaction and reset
   const completeTransaction = () => {
     setIsCheckoutDialogOpen(false);
@@ -340,235 +565,11 @@ const POSSystem = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('id-ID', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  // Handle manual refresh of transactions
-  const handleRefreshTransactions = () => {
-    setIsRefreshing(true);
-    // Force re-render by changing the date slightly and then back
-    const currentDate = selectedDate;
-    setSelectedDate('refresh-trigger');
-    setTimeout(() => {
-      setSelectedDate(currentDate);
-      setIsRefreshing(false);
-    }, 500);
-  };
-
-  // Download receipt as PDF
-  const downloadReceiptPDF = async () => {
-    if (!receiptRef.current) return;
-    console.log('Generating PDF...');
-    
-    try {
-      // Load the libraries with error handling
-      let html2canvas, jsPDF;
-      try {
-        html2canvas = (await import('html2canvas')).default;
-        jsPDF = (await import('jspdf')).default;
-      } catch (importError) {
-        console.error('Error importing PDF libraries:', importError);
-        toast({
-          title: "Error",
-          description: "Gagal memuat library PDF. Coba refresh halaman.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Create a clone of the receipt element with simplified styling for PDF
-      const receiptClone = receiptRef.current.cloneNode(true) as HTMLElement;
-      document.body.appendChild(receiptClone);
-      receiptClone.style.position = 'absolute';
-      receiptClone.style.left = '-9999px';
-      receiptClone.style.fontFamily = 'Courier, monospace';
-      receiptClone.style.width = '300px';
-      receiptClone.style.padding = '10px';
-      receiptClone.style.backgroundColor = 'white';
-      
-      // Create canvas with error handling
-      let canvas;
-      try {
-        canvas = await html2canvas(receiptRef.current, {
-          scale: 2, // Higher resolution
-          allowTaint: true,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          width: 300,
-          height: receiptRef.current.offsetHeight
-        });
-      } catch (canvasError) {
-        console.error('Error creating canvas:', canvasError);
-        document.body.removeChild(receiptClone);
-        toast({
-          title: "Error",
-          description: "Gagal membuat gambar struk. Coba lagi.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Remove the clone after canvas creation
-      document.body.removeChild(receiptClone);
-      
-      try {
-        // Create PDF (80mm width typical for receipts)
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
-        
-        // Calculate dimensions to fit receipt in PDF
-        const imgWidth = 80; // 80mm width
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        
-        // Calculate height while maintaining aspect ratio
-        const ratio = canvas.height / canvas.width;
-        const imgHeight = imgWidth * ratio;
-        
-        // Center horizontally
-        const x = (pageWidth - imgWidth) / 2;
-        
-        // Add image to PDF with calculated dimensions
-        const imgData = canvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', x, 10, imgWidth, imgHeight);
-        
-        // Save PDF
-        pdf.save(`struk-${currentTransaction?.id.slice(0, 8)}.pdf`);
-        
-        toast({
-          title: "Berhasil",
-          description: "Struk berhasil diunduh sebagai PDF",
-        });
-      } catch (pdfError) {
-        console.error('Error generating PDF:', pdfError);
-        toast({
-          title: "Error",
-          description: "Gagal membuat file PDF. Coba lagi.",
-          variant: "destructive"
-        });
-        return;
-      }
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast({
-        title: "Error",
-        description: "Gagal mengunduh struk sebagai PDF. Coba refresh halaman.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Print receipt function
-  const printReceipt = () => {
-    if (!receiptRef.current) return;
-    
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    
-    // Get the receipt content
-    const receiptContent = receiptRef.current.innerHTML;
-    
-    // Create the print document
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Struk Pembayaran</title>
-          <style>
-            @media print {
-              body {
-                margin: 0;
-                padding: 10px;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                line-height: 1.2;
-              }
-              .receipt-header {
-                text-align: center;
-                margin-bottom: 10px;
-              }
-              .receipt-divider {
-                border-top: 1px dashed #000;
-                border-bottom: 1px dashed #000;
-                margin: 5px 0;
-                padding: 2px 0;
-              }
-              .receipt-header-row {
-                border-bottom: 1px dashed #000;
-                padding-bottom: 2px;
-                margin-bottom: 5px;
-              }
-              .receipt-item {
-                margin-bottom: 3px;
-              }
-              .receipt-item-name {
-                max-width: 120px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              }
-              .receipt-item-details {
-                display: flex;
-                gap: 8px;
-              }
-              .receipt-item-qty {
-                width: 24px;
-                text-align: center;
-              }
-              .receipt-item-price {
-                width: 64px;
-                text-align: right;
-              }
-              .receipt-item-total {
-                width: 64px;
-                text-align: right;
-                font-weight: bold;
-              }
-              .receipt-summary {
-                border-top: 1px dashed #000;
-                padding-top: 5px;
-                margin-bottom: 5px;
-              }
-              .receipt-total {
-                font-weight: bold;
-              }
-              .receipt-payment,
-              .receipt-change,
-              .receipt-method {
-                margin-top: 2px;
-              }
-              .receipt-footer {
-                text-align: center;
-                margin-top: 10px;
-              }
-              @page {
-                size: 80mm auto;
-                margin: 0;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${receiptContent}
-        </body>
-      </html>
-    `);
-    
-    printWindow.document.close();
-    
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.print();
-      printWindow.close();
-    };
   };
 
   // Render error state
@@ -821,6 +822,7 @@ const POSSystem = () => {
                     <div className="flex items-center space-x-2">
                       <Calendar className="w-4 h-4 text-gray-500" />
                       <Input
+                        id="transaction-date"
                         type="date"
                         max={new Date().toISOString().split('T')[0]} // Prevent selecting future dates
                         value={selectedDate}
@@ -850,12 +852,12 @@ const POSSystem = () => {
                   <div className="text-center py-12">
                     <AlertOctagon className="w-12 h-12 text-red-500 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Error Loading Transactions
+                      Gagal Memuat Transaksi
                     </h3>
                     <p className="text-gray-500 mb-4">
                       {transactionsError.message || "Terjadi kesalahan saat memuat data transaksi"}
                     </p>
-                    <Button onClick={() => window.location.reload()}>
+                    <Button onClick={handleRefreshTransactions}>
                       <RefreshCw className="w-4 h-4 mr-2" />
                       Refresh
                     </Button>
@@ -864,7 +866,7 @@ const POSSystem = () => {
                   <div className="text-center py-12">
                     <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Belum Ada Transaksi
+                      Belum Ada Transaksi POS
                     </h3>
                     <p className="text-gray-500">
                       Belum ada transaksi POS pada tanggal ini
@@ -901,8 +903,10 @@ const POSSystem = () => {
                             <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {transaction.id.slice(0, 8)}...
                             </td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
-                              {formatDate(transaction.createdAt)}
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600"> 
+                              {transaction.timestamp?.toDate ? 
+                                formatDate(transaction.timestamp.toDate().toISOString()) : 
+                                formatDate(transaction.createdAt)}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                               {transaction.cashierName}
@@ -941,7 +945,7 @@ const POSSystem = () => {
           
           {/* Daily Sales Tab */}
           <TabsContent value="daily-sales">
-            <DailySalesView />
+            <DailySalesView /> 
           </TabsContent>
         </Tabs>
       </div>
@@ -1034,7 +1038,7 @@ const POSSystem = () => {
             <>
               <div className="flex flex-col items-center justify-center py-6">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+                  <CheckCircle className="w-8 h-8 text-green-600" /> 
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Transaksi Berhasil!</h3>
                 <p className="text-gray-600 text-center mb-4">
@@ -1222,7 +1226,7 @@ const POSSystem = () => {
             <Button 
               onClick={printReceipt}
               disabled={!currentTransaction}
-              className="sm:flex-1 bg-green-600 hover:bg-green-700"
+              className="sm:flex-1 bg-green-600 hover:bg-green-700 text-white"
             >
               <Printer className="w-4 h-4 mr-2" />
               Print Struk
