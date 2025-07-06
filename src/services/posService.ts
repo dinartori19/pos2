@@ -44,9 +44,9 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       // Create a simplified version of items without full product objects
       const simplifiedItems = transaction.items.map(item => ({
         id: item.id,
-        product_id: item.product.id,
-        name: item.product.name,
-        price: item.price,
+        product_id: item.product.id, 
+        name: item.product.name, 
+        price: item.price, 
         quantity: item.quantity,
         totalPrice: item.totalPrice,
         // Only store the image URL reference, not the full image data
@@ -59,7 +59,7 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
         paymentMethod: transaction.paymentMethod,
         cashReceived: transaction.cashReceived,
         change: transaction.change,
-        status: transaction.status,
+        status: transaction.status, 
         cashierId: transaction.cashierId,
         cashierName: transaction.cashierName,
         // Use Firestore Timestamp for better querying
@@ -99,7 +99,9 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       
       console.log('Financial transaction record created');
       
+      // Update daily sales record
       await updateDailySales(dateString, transaction.totalAmount);
+      console.log('Daily sales record updated');
       
     } catch (error) {
       console.error('Error saving transaction records:', error);
