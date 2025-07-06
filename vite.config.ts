@@ -29,25 +29,25 @@ export default defineConfig(({ mode }) => ({
         orientation: 'portrait',
         icons: [
           {
-            src: '/logo.svg',
+            src: '/icons/icon-192x192.png',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: '/logo.svg',
+            src: '/icons/icon-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: '/logo.svg',
+            src: '/icons/maskable-icon.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'maskable'
           },
           {
-            src: '/logo.svg',
+            src: '/icons/apple-touch-icon.png',
             sizes: '180x180',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'apple touch icon'
           }
         ]

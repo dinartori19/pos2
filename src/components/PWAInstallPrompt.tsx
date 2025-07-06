@@ -47,7 +47,7 @@ const PWAInstallPrompt = () => {
     <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg border-t border-gray-200 p-4 z-40 animate-fade-in">
       <button 
         onClick={handleDismiss}
-        className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 z-10"
+        className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
         aria-label="Close"
       >
         <X className="w-5 h-5" />
@@ -56,7 +56,7 @@ const PWAInstallPrompt = () => {
       <div className="flex items-center">
         <div className="mr-4 flex-shrink-0">
           <img 
-            src="/logo.svg" 
+            src="/logo.jpg" 
             alt="Injapan Food Logo" 
             className="w-12 h-12 rounded-full object-contain"
           />

@@ -184,7 +184,7 @@ const AuthForm = () => {
         <div className="text-center">
           <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4">
             <img 
-              src="/logo.svg" 
+              src="/logo.jpg" 
               alt="Injapan Food Logo" 
               className="w-full h-full object-contain"
             />

@@ -68,14 +68,12 @@ const Header = ({ shouldAnimateCart = false }: HeaderProps) => {
           <div onClick={() => handleNavClick('/')} className="flex items-center space-x-3 cursor-pointer">
             <div className="w-12 h-12 rounded-full overflow-hidden">
               <img 
-                src="/logo.svg" 
+                src="/logo.jpg" 
                 alt="Injapan Food Logo" 
                 className="w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-xl font-bold text-primary">
-              <span className="hidden sm:inline">Injapan Food</span>
-            </h1>
+            <h1 className="text-xl font-bold text-primary">Injapan Food</h1>
           </div>
 
           {/* Desktop Navigation */}
