@@ -208,6 +208,12 @@ export interface POSTransaction {
       category: string;
       image_url?: string;
     };
+      id: string;
+      name: string;
+      price: number;
+      category: string;
+      image_url?: string;
+    };
     quantity: number;
     price: number;
     totalPrice: number;
@@ -217,6 +223,8 @@ export interface POSTransaction {
   cashReceived?: number;
   change?: number;
   status: 'completed' | 'cancelled';
+  timestamp?: any; // Firestore Timestamp
+  dateString?: string; // YYYY-MM-DD format for easier filtering
   timestamp?: any; // Firestore Timestamp
   dateString?: string; // YYYY-MM-DD format for easier filtering
   createdAt: string;

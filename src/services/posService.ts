@@ -53,9 +53,36 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
         image_url: item.product.image_url
       }));
       
+      // Get current date in YYYY-MM-DD format for easier filtering
+      const dateString = new Date().toISOString().split('T')[0];
+
+      // Create a simplified version of items without full product objects
+      const simplifiedItems = transaction.items.map(item => ({
+        id: item.id,
+        product_id: item.product.id, 
+        name: item.product.name, 
+        price: item.price, 
+        quantity: item.quantity,
+        totalPrice: item.totalPrice,
+        // Only store the image URL reference, not the full image data
+        image_url: item.product.image_url
+      }));
+      
       const transactionRef = await addDoc(collection(db, 'pos_transactions'), {
         items: simplifiedItems,
         totalAmount: transaction.totalAmount,
+        paymentMethod: transaction.paymentMethod,
+        cashReceived: transaction.cashReceived,
+        change: transaction.change,
+        status: transaction.status, 
+        cashierId: transaction.cashierId,
+        cashierName: transaction.cashierName,
+        // Use Firestore Timestamp for better querying
+        timestamp: Timestamp.now(),
+        // Keep createdAt for backward compatibility - use the same time as timestamp
+        createdAt: new Date().toISOString(),
+        // Add a date string for easier filtering
+        dateString: dateString
         paymentMethod: transaction.paymentMethod,
         cashReceived: transaction.cashReceived,
         change: transaction.change,
@@ -95,13 +122,24 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
         createdAt: new Date().toISOString(),
         // Add a date string for easier filtering
         dateString: dateString
+        paymentMethod: transaction.paymentMethod,
+        cashReceived: transaction.cashReceived,
+        change: transaction.change,
+        status: transaction.status,
+        cashierId: transaction.cashierId,
+        cashierName: transaction.cashierName,
+        // Use Firestore Timestamp for better querying
+        timestamp: Timestamp.now(),
+        // Keep createdAt for backward compatibility - use the same time as timestamp
+        createdAt: new Date().toISOString(),
+        // Add a date string for easier filtering
+        dateString: dateString
       });
       
       console.log('Financial transaction record created');
       
       // Update daily sales record
       await updateDailySales(dateString, transaction.totalAmount);
-      console.log('Daily sales record updated');
       
     } catch (error) {
       console.error('Error saving transaction records:', error);

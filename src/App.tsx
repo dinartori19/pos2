@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/useFirebaseAuth';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { LanguageProvider } from '@/hooks/useLanguage';
 import OfflineNotice from '@/components/OfflineNotice';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
@@ -47,6 +48,12 @@ function App() {
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 3,
+        refetchOnWindowFocus: false, // Don't refetch when window regains focus
+        refetchOnMount: false, // Don't refetch when component mounts if data is fresh
+        // Add a retry delay to prevent hammering the server
+        retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
+      },
         retry: 1,
         refetchOnWindowFocus: false, // Don't refetch when window regains focus
         refetchOnMount: false, // Don't refetch when component mounts if data is fresh
@@ -54,11 +61,25 @@ function App() {
         retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
       },
     },
-  }));
-
   // Process referral code when app loads
   useEffect(() => {
     processReferralCode();
+  }, []);
+
+  // Configure online status management
+  useEffect(() => {
+    // React Query's online manager
+    onlineManager.setEventListener(setOnline => {
+      // Listen to online/offline events
+      window.addEventListener('online', () => setOnline(true));
+      window.addEventListener('offline', () => setOnline(false));
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('online', () => setOnline(true));
+        window.removeEventListener('offline', () => setOnline(false));
+      };
+    });
   }, []);
 
   // Configure online status management
@@ -128,6 +149,7 @@ function App() {
             <PWAInstallPrompt />
           </Router>
         </LanguageProvider>
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </AuthProvider>
     </QueryClientProvider>
