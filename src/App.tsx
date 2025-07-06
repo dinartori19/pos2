@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/useFirebaseAuth';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -38,24 +38,43 @@ import POSSystem from '@/pages/admin/POSSystem';
 import CashierManagement from '@/pages/admin/CashierManagement';
 
 import './App.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { processReferralCode } from '@/utils/referralUtils';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-      refetchOnWindowFocus: false, // Don't refetch when window regains focus
-      refetchOnMount: false, // Don't refetch when component mounts if data is fresh
-    },
-  },
-});
-
 function App() {
+  // Create query client instance inside the component to ensure it's created after hydration
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        retry: 1,
+        refetchOnWindowFocus: false, // Don't refetch when window regains focus
+        refetchOnMount: false, // Don't refetch when component mounts if data is fresh
+        // Add a retry delay to prevent hammering the server
+        retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
+      },
+    },
+  }));
+
   // Process referral code when app loads
   useEffect(() => {
     processReferralCode();
+  }, []);
+
+  // Configure online status management
+  useEffect(() => {
+    // React Query's online manager
+    onlineManager.setEventListener(setOnline => {
+      // Listen to online/offline events
+      window.addEventListener('online', () => setOnline(true));
+      window.addEventListener('offline', () => setOnline(false));
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('online', () => setOnline(true));
+        window.removeEventListener('offline', () => setOnline(false));
+      };
+    });
   }, []);
 
   return (
