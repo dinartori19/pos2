@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, Calendar } from 'lucide-react';
+import { DollarSign, Calendar, RefreshCw } from 'lucide-react';
 import { DailySales } from '@/services/dailySalesService';
 
 interface DailySalesChartProps {
   sales: DailySales[];
   isLoading: boolean;
+  onRefresh?: () => void;
 }
 
-const DailySalesChart = ({ sales, isLoading }: DailySalesChartProps) => {
+const DailySalesChart = ({ sales, isLoading, onRefresh }: DailySalesChartProps) => {
   const [chartData, setChartData] = useState<any[]>([]);
 
   // Format currency as Yen
@@ -66,11 +67,21 @@ const DailySalesChart = ({ sales, isLoading }: DailySalesChartProps) => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <div className="flex items-center">
           <DollarSign className="w-5 h-5 mr-2" />
-          Omzet Harian
-        </CardTitle>
+          <CardTitle>Omzet Harian</CardTitle>
+        </div>
+        {onRefresh && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onRefresh}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (

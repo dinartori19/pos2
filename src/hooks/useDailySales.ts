@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDailySales, getMonthlySales, getRecentDailySales, DailySales } from '@/services/dailySalesService';
+import { getDailySales, getMonthlySales, getRecentDailySales, DailySales } from '@/services/dailySalesService'; 
 
 /**
  * Hook to get daily sales for a specific date
@@ -8,14 +8,23 @@ import { getDailySales, getMonthlySales, getRecentDailySales, DailySales } from 
 export const useDailySales = (date: string) => {
   const [sales, setSales] = useState<DailySales | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<Error | null>(null); 
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   useEffect(() => {
+    // Skip if we just fetched this data recently (within 10 seconds)
+    const now = Date.now();
+    if (now - lastFetchTime < 10000 && lastFetchTime > 0) {
+      console.log('Skipping fetch, data was recently loaded');
+      return;
+    }
+    
     const fetchSales = async () => {
       try {
         setLoading(true);
         const data = await getDailySales(date);
         setSales(data);
+        setLastFetchTime(Date.now());
       } catch (err) {
         console.error('Error fetching daily sales:', err);
         setError(err instanceof Error ? err : new Error('Failed to fetch daily sales'));
@@ -25,7 +34,7 @@ export const useDailySales = (date: string) => {
     };
 
     fetchSales();
-  }, [date]);
+  }, [date, lastFetchTime]);
 
   return { sales, loading, error };
 };
@@ -38,14 +47,23 @@ export const useDailySales = (date: string) => {
 export const useMonthlySales = (year: number, month: number) => {
   const [sales, setSales] = useState<DailySales[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<Error | null>(null); 
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   useEffect(() => {
+    // Skip if we just fetched this data recently (within 10 seconds)
+    const now = Date.now();
+    if (now - lastFetchTime < 10000 && lastFetchTime > 0) {
+      console.log('Skipping fetch, data was recently loaded');
+      return;
+    }
+    
     const fetchSales = async () => {
       try {
         setLoading(true);
         const data = await getMonthlySales(year, month);
         setSales(data);
+        setLastFetchTime(Date.now());
       } catch (err) {
         console.error('Error fetching monthly sales:', err);
         setError(err instanceof Error ? err : new Error('Failed to fetch monthly sales'));
@@ -55,7 +73,7 @@ export const useMonthlySales = (year: number, month: number) => {
     };
 
     fetchSales();
-  }, [year, month]);
+  }, [year, month, lastFetchTime]);
 
   return { sales, loading, error };
 };

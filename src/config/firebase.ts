@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { firebaseConfig } from '@/config/env';
 
@@ -24,6 +24,17 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
+
+  // Enable offline persistence for Firestore
+  if (typeof window !== 'undefined') {
+    enableIndexedDbPersistence(db)
+      .then(() => {
+        console.log('Firestore persistence enabled successfully');
+      })
+      .catch((err) => {
+        console.warn('Error enabling Firestore persistence:', err);
+      });
+  }
 
   // Use emulators in development if needed
   if (import.meta.env.DEV && window.location.hostname === 'localhost') {

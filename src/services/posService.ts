@@ -1,7 +1,7 @@
 import { collection, addDoc, updateDoc, doc, runTransaction, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Product, POSTransaction } from '@/types';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast'; 
 import { updateDailySales } from './dailySalesService';
 
 // Process a POS transaction and update inventory
@@ -38,6 +38,9 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
     
     // Create transaction record
     try {
+      // Get current date in YYYY-MM-DD format for easier filtering
+      const dateString = new Date().toISOString().split('T')[0];
+      
       const transactionRef = await addDoc(collection(db, 'pos_transactions'), {
         items: transaction.items,
         totalAmount: transaction.totalAmount,
@@ -61,20 +64,30 @@ export const processPOSTransaction = async (transaction: Omit<POSTransaction, 'i
       // Create financial transaction record
       await addDoc(collection(db, 'financial_transactions'), {
         transactionId: transactionId,
-        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        date: dateString, // YYYY-MM-DD format
         category: 'sales',
         type: 'income',
         amount: transaction.totalAmount,
         description: `POS Sale by ${transaction.cashierName}`,
+        items: transaction.items,
+        totalAmount: transaction.totalAmount,
         paymentMethod: transaction.paymentMethod,
-        createdAt: new Date().toISOString()
+        cashReceived: transaction.cashReceived,
+        change: transaction.change,
+        status: transaction.status,
+        cashierId: transaction.cashierId,
+        cashierName: transaction.cashierName,
+        // Use Firestore Timestamp for better querying
+        timestamp: Timestamp.now(),
+        // Keep createdAt for backward compatibility - use the same time as timestamp
+        createdAt: new Date().toISOString(),
+        // Add a date string for easier filtering
+        dateString: dateString
       });
       
       console.log('Financial transaction record created');
       
-      // Update daily sales record
-      await updateDailySales(new Date().toISOString().split('T')[0], transaction.totalAmount);
-      console.log('Daily sales record updated');
+      await updateDailySales(dateString, transaction.totalAmount);
       
     } catch (error) {
       console.error('Error saving transaction records:', error);

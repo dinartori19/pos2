@@ -14,7 +14,7 @@ import {
 import { firebaseConfig } from '@/config/env';
 
 interface AuthContextType {
-  user: User | null;
+  user: User | null; 
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -27,9 +27,7 @@ let auth;
 
 try {
   console.log('Initializing Firebase with config:', {
-    projectId: firebaseConfig.projectId,
-    authDomain: firebaseConfig.authDomain,
-    hasApiKey: !!firebaseConfig.apiKey
+    projectId: firebaseConfig.projectId
   });
   
   app = initializeApp(firebaseConfig);
@@ -52,10 +50,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Add a loading timeout to prevent infinite loading state
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        console.log('Auth loading timeout reached, setting loading to false');
+        setLoading(false);
+      }
+    }, 5000); // 5 second timeout
+    
     if (!auth) {
       console.error('Firebase auth not initialized');
       setLoading(false);
-      return () => {};
+      clearTimeout(loadingTimeout);
+      return () => {
+        clearTimeout(loadingTimeout);
+      };
     }
 
     console.log('Setting up Firebase auth state listener');
@@ -70,6 +79,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       setUser(user);
       setLoading(false);
+      clearTimeout(loadingTimeout);
     }, (error) => {
       console.error('Auth state change error:', error);
       setLoading(false);
@@ -78,6 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       console.log('Cleaning up Firebase auth listener');
       unsubscribe();
+      clearTimeout(loadingTimeout);
     };
   }, []);
 

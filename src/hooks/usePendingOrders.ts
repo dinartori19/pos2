@@ -5,8 +5,9 @@ export const usePendingOrders = () => {
   return useQuery({
     queryKey: ['pending-orders'],
     queryFn: getPendingOrders,
-    staleTime: 60000, // 1 minute
-    refetchInterval: 60000, // Refetch every minute
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    refetchInterval: 3 * 60 * 1000, // Refetch every 3 minutes
     refetchIntervalInBackground: false, // Don't refetch when tab is not active
+    refetchOnWindowFocus: false,
   });
 };

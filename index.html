@@ -23,9 +23,26 @@
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="/logo.jpg" />
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Add a performance optimization to prevent excessive reloads
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Use sessionStorage to track reload count
+          const reloadCount = sessionStorage.getItem('reloadCount') || 0;
+          if (reloadCount > 5) {
+            console.warn('Too many reloads detected, preventing further automatic reloads');
+            // Reset after 1 minute
+            setTimeout(() => {
+              sessionStorage.setItem('reloadCount', '0');
+            }, 60000);
+          } else {
+            sessionStorage.setItem('reloadCount', parseInt(reloadCount) + 1);
+          }
+        });
+      }
+    </script>
   </body>
 </html>

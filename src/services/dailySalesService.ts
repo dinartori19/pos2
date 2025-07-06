@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, setDoc, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 // Interface for daily sales data
@@ -7,6 +7,7 @@ export interface DailySales {
   totalSales: number;
   transactionCount: number;
   updatedAt: string;
+  timestamp?: any; // Firestore Timestamp
 }
 
 /**
@@ -24,12 +25,13 @@ export const updateDailySales = async (date: string, amount: number): Promise<vo
     
     if (docSnapshot.exists()) {
       // Update existing record
-      const existingData = docSnapshot.data() as DailySales;
+      const existingData = docSnapshot.data() as DailySales; 
       await setDoc(dailySalesRef, {
         date,
         totalSales: existingData.totalSales + amount,
         transactionCount: existingData.transactionCount + 1,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        timestamp: Timestamp.now()
       });
       console.log(`Updated existing daily sales record for ${date}`);
     } else {
@@ -38,7 +40,8 @@ export const updateDailySales = async (date: string, amount: number): Promise<vo
         date,
         totalSales: amount,
         transactionCount: 1,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        timestamp: Timestamp.now()
       });
       console.log(`Created new daily sales record for ${date}`);
     }
@@ -81,14 +84,36 @@ export const getMonthlySales = async (year: number, month: number): Promise<Dail
     // Create date prefix for the month (YYYY-MM)
     const datePrefix = `${year}-${monthStr}`;
     
-    // Query daily sales for the month
+    // Create date objects for start and end of month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Last day of month
+    
+    // Convert to Firestore Timestamp objects
+    const startTimestamp = Timestamp.fromDate(startDate);
+    const endTimestamp = Timestamp.fromDate(endDate);
+    
+    // Query daily sales for the month using timestamp if available
     const dailySalesRef = collection(db, 'daily_sales');
-    const q = query(
-      dailySalesRef,
-      where('date', '>=', `${datePrefix}-01`),
-      where('date', '<=', `${datePrefix}-31`),
-      orderBy('date')
-    );
+    
+    // Try to use timestamp for better performance
+    let q;
+    try {
+      q = query(
+        dailySalesRef,
+        where('timestamp', '>=', startTimestamp),
+        where('timestamp', '<=', endTimestamp),
+        orderBy('timestamp')
+      );
+    } catch (err) {
+      // Fallback to string-based date if timestamp query fails
+      console.log('Falling back to string-based date query');
+      q = query(
+        dailySalesRef,
+        where('date', '>=', `${datePrefix}-01`),
+        where('date', '<=', `${datePrefix}-31`),
+        orderBy('date')
+      );
+    }
     
     const querySnapshot = await getDocs(q);
     
@@ -110,12 +135,34 @@ export const getMonthlySales = async (year: number, month: number): Promise<Dail
  */
 export const getRecentDailySales = async (limitCount: number = 7): Promise<DailySales[]> => {
   try {
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - limitCount);
+    
+    // Convert to Firestore Timestamp objects
+    const startTimestamp = Timestamp.fromDate(sevenDaysAgo);
+    const endTimestamp = Timestamp.fromDate(now);
+    
     const dailySalesRef = collection(db, 'daily_sales');
-    const q = query(
-      dailySalesRef,
-      orderBy('date', 'desc'),
-      limit(limitCount)
-    );
+    
+    // Try to use timestamp for better performance
+    let q;
+    try {
+      q = query(
+        dailySalesRef,
+        where('timestamp', '>=', startTimestamp),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+      );
+    } catch (err) {
+      // Fallback to string-based date if timestamp query fails
+      console.log('Falling back to string-based date query for recent sales');
+      q = query(
+        dailySalesRef,
+        orderBy('date', 'desc'),
+        limit(limitCount)
+      );
+    }
     
     const querySnapshot = await getDocs(q);
     
@@ -125,7 +172,14 @@ export const getRecentDailySales = async (limitCount: number = 7): Promise<Daily
     });
     
     // Sort by date ascending
-    return salesData.sort((a, b) => a.date.localeCompare(b.date));
+    return salesData.sort((a, b) => {
+      // If we have timestamps, use those for sorting
+      if (a.timestamp && b.timestamp) {
+        return a.timestamp.seconds - b.timestamp.seconds;
+      }
+      // Otherwise fall back to string comparison
+      return a.date.localeCompare(b.date);
+    });
   } catch (error) {
     console.error('Error getting recent daily sales:', error);
     throw error;

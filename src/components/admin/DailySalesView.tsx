@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, ChevronLeft, ChevronRight, DollarSign, ShoppingCart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; 
+import { Calendar, ChevronLeft, ChevronRight, DollarSign, ShoppingCart, RefreshCw } from 'lucide-react';
 import { useDailySales, useMonthlySales } from '@/hooks/useDailySales';
 import DailySalesChart from './DailySalesChart';
 
-const DailySalesView = () => {
+const DailySalesView = () => { 
   // Get current date in YYYY-MM-DD format
   const getCurrentDate = () => {
     const now = new Date();
@@ -17,9 +17,10 @@ const DailySalesView = () => {
   // State for selected date
   const [selectedDate, setSelectedDate] = useState(getCurrentDate());
   const [currentMonth, setCurrentMonth] = useState(() => {
-    const now = new Date();
+    const now = new Date(); 
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Get daily sales for selected date
   const { sales: dailySales, loading: dailyLoading } = useDailySales(selectedDate);
@@ -101,6 +102,18 @@ const DailySalesView = () => {
     setCurrentMonth({ year: now.getFullYear(), month: now.getMonth() + 1 });
   };
 
+  // Handle refresh
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    // Force re-render by changing the date slightly and then back
+    const currentDate = selectedDate;
+    setSelectedDate('refresh-trigger');
+    setTimeout(() => {
+      setSelectedDate(currentDate);
+      setIsRefreshing(false);
+    }, 500);
+  };
+
   return (
     <div className="space-y-6">
       {/* Daily Sales Summary */}
@@ -124,8 +137,22 @@ const DailySalesView = () => {
               <Button variant="outline" size="sm" onClick={goToNextDay}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={goToToday}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToToday}
+                className="mr-2"
+              >
                 Hari Ini
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
             </div>
           </div>
@@ -202,15 +229,30 @@ const DailySalesView = () => {
             <Button variant="outline" size="sm" onClick={goToNextMonth}>
               <ChevronRight className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={goToToday}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={goToToday}
+              className="mr-2"
+            >
               Bulan Ini
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
           </div>
         </div>
         
         <DailySalesChart 
-          sales={monthlySales} 
-          isLoading={monthlyLoading} 
+          sales={monthlySales}
+          isLoading={monthlyLoading}
+          onRefresh={handleRefresh}
         />
       </div>
     </div>

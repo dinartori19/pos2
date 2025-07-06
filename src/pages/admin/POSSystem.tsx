@@ -591,10 +591,6 @@ const POSSystem = () => {
               <Receipt className="w-4 h-4 mr-2" />
               Riwayat Transaksi
             </TabsTrigger>
-            <TabsTrigger value="daily-sales" className="flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Omzet Harian
-            </TabsTrigger>
           </TabsList>
 
           {/* POS Tab */}
