@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/useFirebaseAuth';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { LanguageProvider } from '@/hooks/useLanguage';
 import OfflineNotice from '@/components/OfflineNotice';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
@@ -85,22 +84,6 @@ function App() {
     });
   }, []);
 
-  // Configure online status management
-  useEffect(() => {
-    // React Query's online manager
-    onlineManager.setEventListener(setOnline => {
-      // Listen to online/offline events
-      window.addEventListener('online', () => setOnline(true));
-      window.addEventListener('offline', () => setOnline(false));
-      
-      // Clean up
-      return () => {
-        window.removeEventListener('online', () => setOnline(true));
-        window.removeEventListener('offline', () => setOnline(false));
-      };
-    });
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -152,7 +135,6 @@ function App() {
             <PWAInstallPrompt />
           </Router>
         </LanguageProvider>
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </AuthProvider>
     </QueryClientProvider>
