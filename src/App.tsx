@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/hooks/useFirebaseAuth';
 import { LanguageProvider } from '@/hooks/useLanguage';
 import OfflineNotice from '@/components/OfflineNotice';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';

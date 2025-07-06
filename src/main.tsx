@@ -23,15 +23,14 @@ window.addEventListener('error', (event) => {
   }
 });
 
-// Register service worker
-registerSW({ 
+// Register service worker with custom update handling
+const updateSW = registerSW({ 
   // Increase the interval to check for updates to reduce reload frequency
   immediate: false,
   intervalMS: 60 * 60 * 1000, // Check for updates every hour instead of every minute
   onNeedRefresh() {
     // Use a less intrusive notification instead of a confirm dialog
     const shouldUpdate = window.localStorage.getItem('autoUpdateEnabled') !== 'false';
-    const updateSW = registerSW;
     if (shouldUpdate) {
       console.log('New content available, updating automatically');
       updateSW(true);
