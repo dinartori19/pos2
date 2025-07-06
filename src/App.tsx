@@ -54,6 +54,7 @@ function App() {
         // Add a retry delay to prevent hammering the server
         retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
       },
+      mutations: {
         retry: 1,
         refetchOnWindowFocus: false, // Don't refetch when window regains focus
         refetchOnMount: false, // Don't refetch when component mounts if data is fresh
@@ -61,6 +62,8 @@ function App() {
         retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
       },
     },
+  }));
+
   // Process referral code when app loads
   useEffect(() => {
     processReferralCode();
